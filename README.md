@@ -12,6 +12,8 @@ This is MIRARI a tool to help record super long videos in timelapse. This is a s
 - Create a record of my day
 - And many more!!!
 
+demo link: https://abhrajit-gogoi.github.io/mirari/
+
 ### Hope you enjoy this tool i made! thank you!!!!!
 
 ![](image.png)
