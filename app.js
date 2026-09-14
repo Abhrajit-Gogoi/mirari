@@ -79,12 +79,10 @@ async function initCam() {
   }
 }
 
-function snapFrame() {
+async function snapFrame() {
   if (!cam.videoWidth) return;
-  canvas.width = cam.videoWidth;
-  canvas.height = cam.videoHeight;
-  ctx.drawImage(cam, 0, 0);
-  frames.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  const bmp = await createImageBitmap(cam);
+  frames.push(bmp);
   statText.textContent = `Captured ${frames.length} frames`;
 }
 
@@ -92,8 +90,12 @@ async function compileVideo() {
   if (!frames.length) return;
   statText.textContent = 'Compiling...';
 
+  canvas.width = cam.videoWidth;
+  canvas.height = cam.videoHeight;
+
   const fps = parseInt(fpsInput.value) || 30;
-  const outStream = canvas.captureStream(fps);
+  const outStream = canvas.captureStream(0);
+  const track = outStream.getVideoTracks()[0];
   const rec = new MediaRecorder(outStream);
   const chunks = [];
 
@@ -109,8 +111,12 @@ async function compileVideo() {
   const delay = 1000 / fps;
 
   for (const f of frames) {
-    ctx.putImageData(f, 0, 0);
+    ctx.drawImage(f, 0, 0);
+    if (track && track.requestFrame) {
+      track.requestFrame();
+    }
     await new Promise(r => setTimeout(r, delay));
+    f.close();
   }
 
   rec.stop();
@@ -141,7 +147,7 @@ recBtn.addEventListener('click', async () => {
     recBtn.classList.add('active');
 
     const sec = parseFloat(intervalInput.value) || 2;
-    snapFrame();
+    await snapFrame();
     timer = setInterval(snapFrame, sec * 1000);
   }
 });
