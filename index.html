@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timelapse App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <h1>Timelapse</h1>
+
+    <div class="card controls">
+      <div class="field">
+        <label for="interval">Interval (s)</label>
+        <input type="number" id="interval" value="2" min="1">
+      </div>
+      <div class="field">
+        <label for="fps">Target FPS</label>
+        <input type="number" id="fps" value="30" min="1" max="60">
+      </div>
+      <div class="btns">
+        <button id="recBtn">Start</button>
+        <button id="toggleBtn">Hide Preview</button>
+      </div>
+    </div>
+
+    <div class="card media">
+      <div id="camWrap" class="cam-box">
+        <video id="cam" autoplay playsinline muted></video>
+      </div>
+      <div class="stat" id="statText">Ready</div>
+    </div>
+
+    <div class="card gallery">
+      <h2>Saved</h2>
+      <div id="list" class="list"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
