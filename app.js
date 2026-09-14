@@ -38,13 +38,33 @@ async function saveVideo(blob) {
   });
 }
 
+async function deleteVideo(id) {
+  const db = await openDb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('videos', 'readwrite');
+    const store = tx.objectStore('videos');
+    const req = store.delete(id);
+    req.onsuccess = () => res();
+    req.onerror = () => rej(req.error);
+  });
+}
+
 async function getVideos() {
   const db = await openDb();
   return new Promise((res, rej) => {
     const tx = db.transaction('videos', 'readonly');
     const store = tx.objectStore('videos');
-    const req = store.getAll();
-    req.onsuccess = () => res(req.result);
+    const req = store.openCursor();
+    const items = [];
+    req.onsuccess = e => {
+      const cursor = e.target.result;
+      if (cursor) {
+        items.push({ id: cursor.key, ...cursor.value });
+        cursor.continue();
+      } else {
+        res(items);
+      }
+    };
     req.onerror = () => rej(req.error);
   });
 }
@@ -64,8 +84,32 @@ async function renderGallery() {
     info.className = 'stat';
     info.textContent = item.date;
 
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const dlBtn = document.createElement('button');
+    dlBtn.textContent = 'Download';
+    dlBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = vid.src;
+      a.download = `timelapse-${item.id}.webm`;
+      a.click();
+    };
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-del';
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = async () => {
+      await deleteVideo(item.id);
+      await renderGallery();
+    };
+
+    actions.appendChild(dlBtn);
+    actions.appendChild(delBtn);
+
     card.appendChild(vid);
     card.appendChild(info);
+    card.appendChild(actions);
     list.appendChild(card);
   });
 }

@@ -132,3 +132,17 @@ video {
   border-radius: 8px;
 }
 
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.actions button {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.btn-del {
+  color: #e11d48;
+}
