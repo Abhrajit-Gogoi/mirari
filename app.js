@@ -4,6 +4,7 @@ const toggleBtn = document.getElementById('toggleBtn');
 const statText = document.getElementById('statText');
 const recBtn = document.getElementById('recBtn');
 const intervalInput = document.getElementById('interval');
+const fpsInput = document.getElementById('fps');
 
 let stream = null;
 let isRec = false;
@@ -12,6 +13,29 @@ let frames = [];
 
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
+
+function openDb() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('timelapse_db', 1);
+    req.onupgradeneeded = e => {
+      e.target.result.createObjectStore('videos', { autoIncrement: true });
+    };
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function saveVideo(blob) {
+  const db = await openDb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('videos', 'readwrite');
+    const store = tx.objectStore('videos');
+    const item = { blob, date: new Date().toLocaleString() };
+    const req = store.add(item);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
 
 async function initCam() {
   try {
@@ -31,25 +55,57 @@ function snapFrame() {
   statText.textContent = `Captured ${frames.length} frames`;
 }
 
+async function compileVideo() {
+  if (!frames.length) return;
+  statText.textContent = 'Compiling...';
+
+  const fps = parseInt(fpsInput.value) || 30;
+  const outStream = canvas.captureStream(fps);
+  const rec = new MediaRecorder(outStream);
+  const chunks = [];
+
+  rec.ondataavailable = e => {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+
+  const compiled = new Promise(res => {
+    rec.onstop = () => res(new Blob(chunks, { type: 'video/webm' }));
+  });
+
+  rec.start();
+  const delay = 1000 / fps;
+
+  for (const f of frames) {
+    ctx.putImageData(f, 0, 0);
+    await new Promise(r => setTimeout(r, delay));
+  }
+
+  rec.stop();
+  const blob = await compiled;
+  await saveVideo(blob);
+  statText.textContent = 'Saved to local storage';
+  frames = [];
+}
+
 toggleBtn.addEventListener('click', () => {
   const isHidden = camWrap.classList.toggle('hidden');
   toggleBtn.textContent = isHidden ? 'Show Preview' : 'Hide Preview';
   toggleBtn.classList.toggle('active', isHidden);
 });
 
-recBtn.addEventListener('click', () => {
+recBtn.addEventListener('click', async () => {
   if (isRec) {
     clearInterval(timer);
     isRec = false;
     recBtn.textContent = 'Start';
     recBtn.classList.remove('active');
-    statText.textContent = `Stopped. Total frames: ${frames.length}`;
+    await compileVideo();
   } else {
     frames = [];
     isRec = true;
     recBtn.textContent = 'Stop';
     recBtn.classList.add('active');
-    
+
     const sec = parseFloat(intervalInput.value) || 2;
     snapFrame();
     timer = setInterval(snapFrame, sec * 1000);
