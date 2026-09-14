@@ -5,6 +5,7 @@ const statText = document.getElementById('statText');
 const recBtn = document.getElementById('recBtn');
 const intervalInput = document.getElementById('interval');
 const fpsInput = document.getElementById('fps');
+const list = document.getElementById('list');
 
 let stream = null;
 let isRec = false;
@@ -34,6 +35,38 @@ async function saveVideo(blob) {
     const req = store.add(item);
     req.onsuccess = () => res(req.result);
     req.onerror = () => rej(req.error);
+  });
+}
+
+async function getVideos() {
+  const db = await openDb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('videos', 'readonly');
+    const store = tx.objectStore('videos');
+    const req = store.getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function renderGallery() {
+  list.innerHTML = '';
+  const items = await getVideos();
+  items.reverse().forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'item';
+
+    const vid = document.createElement('video');
+    vid.src = URL.createObjectURL(item.blob);
+    vid.controls = true;
+
+    const info = document.createElement('span');
+    info.className = 'stat';
+    info.textContent = item.date;
+
+    card.appendChild(vid);
+    card.appendChild(info);
+    list.appendChild(card);
   });
 }
 
@@ -83,6 +116,7 @@ async function compileVideo() {
   rec.stop();
   const blob = await compiled;
   await saveVideo(blob);
+  await renderGallery();
   statText.textContent = 'Saved to local storage';
   frames = [];
 }
@@ -113,3 +147,4 @@ recBtn.addEventListener('click', async () => {
 });
 
 initCam();
+renderGallery();
